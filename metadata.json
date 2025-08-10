@@ -1,0 +1,9 @@
+{
+  "name": "Copy of Manufacturing Capacity Tracker Запуск тест ",
+  "description": "A web application to track manufacturing production load, connect clients with manufacturers, and provide administrative oversight. Users can search for facilities, manage production details, and handle inquiries based on their roles.",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "prompt": ""
+}
