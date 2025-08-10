@@ -35,23 +35,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (role: UserRole, name: string = 'Anonymous') => {
     setIsLoading(true);
-    // In a real app, this would call an API endpoint.
-    // For this mock, we'll create a user object based on role.
-    const mockId = `user-${Date.now()}`;
-    let userName = name;
-    if (role === UserRole.MANUFACTURER) userName = `${name} Manufacturing`;
-    if (role === UserRole.ADMIN) userName = `Admin ${name}`;
+    try {
+      // In a real app, this would call an API endpoint.
+      // For this mock, we'll create a user object based on role.
+      const mockId = `user-${Date.now()}`;
+      let userName = name;
+      if (role === UserRole.MANUFACTURER) userName = `${name} Manufacturing`;
+      if (role === UserRole.ADMIN) userName = `Admin ${name}`;
 
-    const user: User = { id: mockId, name: userName, role };
-    
-    // If manufacturer, ensure a facility exists or create one
-    if (role === UserRole.MANUFACTURER) {
-      await apiService.ensureManufacturerFacility(user.id, user.name);
+      const user: User = { id: mockId, name: userName, role };
+      
+      // If manufacturer, ensure a facility exists or create one
+      if (role === UserRole.MANUFACTURER) {
+        try {
+          await apiService.ensureManufacturerFacility(user.id, user.name);
+        } catch (error) {
+          console.warn("Failed to create manufacturer facility:", error);
+          // Continue with login even if facility creation fails
+        }
+      }
+      
+      setCurrentUser(user);
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } catch (error) {
+      console.error("Login error:", error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-    
-    setCurrentUser(user);
-    localStorage.setItem('currentUser', JSON.stringify(user));
-    setIsLoading(false);
   };
 
   const logout = () => {
@@ -73,22 +84,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
     setIsLoading(true);
     
-    // Clear the cache to ensure the new dashboard fetches fresh data
-    cacheService.clearAll();
+    try {
+      // Clear the cache to ensure the new dashboard fetches fresh data
+      cacheService.clearAll();
 
-    const updatedUser: User = { ...currentUser, role: newRole };
+      const updatedUser: User = { ...currentUser, role: newRole };
 
-    if (newRole === UserRole.MANUFACTURER) {
-      // Ensure facility exists for the new role if it's Manufacturer
-      // This uses the existing user's ID and name, which might need adjustment
-      // if the name format is strictly tied to role (e.g., "X Manufacturing")
-      // For simplicity, we'll keep the original name but ensure facility.
-      await apiService.ensureManufacturerFacility(updatedUser.id, updatedUser.name.replace(/^Admin | Manufacturing$/, ''));
+      if (newRole === UserRole.MANUFACTURER) {
+        // Ensure facility exists for the new role if it's Manufacturer
+        try {
+          const cleanName = updatedUser.name.replace(/^Admin | Manufacturing$/g, '');
+          await apiService.ensureManufacturerFacility(updatedUser.id, cleanName);
+        } catch (error) {
+          console.warn("Failed to create manufacturer facility during role switch:", error);
+          // Continue with role switch even if facility creation fails
+        }
+      }
+      
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    } catch (error) {
+      console.error("Role switch error:", error);
+      // Don't throw error, just log it and continue
+    } finally {
+      setIsLoading(false);
     }
-    
-    setCurrentUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    setIsLoading(false);
   };
 
   const value = { currentUser, isLoading, login, logout, switchRole };

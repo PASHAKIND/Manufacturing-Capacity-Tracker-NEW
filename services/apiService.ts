@@ -217,7 +217,24 @@ export const apiService = {
   },
 
   ensureManufacturerFacility: async (userId: string, userName: string): Promise<ProductionFacility> => {
-      if (!supabase) throw new Error(SUPABASE_INIT_ERROR);
+      if (!supabase) {
+        console.warn("Supabase not connected, returning mock facility");
+        // Return a mock facility when Supabase is not available
+        return {
+          id: `facility-${userId}`,
+          ownerId: userId,
+          name: `${userName} Manufacturing`,
+          location: 'Адрес не указан',
+          city: 'Город не указан',
+          contactInfo: 'Контакты не указаны',
+          productionLoad: 0,
+          productCategories: [],
+          products: [],
+          images: [],
+          certifications: [],
+        };
+      }
+      
       let facility = await apiService.getProductionFacilityByOwnerId(userId);
       if (facility) return facility;
 
